@@ -12,6 +12,9 @@ app.get("/", (request, response) => {
   response.send("Hello!")
 });
 
+app.get("/url.json", (request, response) => {
+  response.json(urlDatabase);
+})
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
