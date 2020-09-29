@@ -24,13 +24,10 @@ Our server logs the request body to the console, then responds with 200 OK.
 Our browser renders the "Ok" message.
 */
 
-app.post("/urls", (request, response) => {
-  console.log(request.body); 
-  const shortURL = generateRandomString();
-  urlDatabase[shortURL] = request.body["longURL"];
-  response.redirect(`/urls/${shortURL}`);
-});                               
 
+
+
+//THESE ARE MY READING "GET" ROUTES:
 app.get("/", (request, response) => {
   response.send("Hello!")
 });
@@ -61,6 +58,22 @@ app.get("/u/:shortURL", (request, response) => {
   response.redirect(longURL);
 });
 
+
+//THESE ARE MY CREATE POST ROUTES:
+app.post("/urls", (request, response) => {
+  console.log(request.body); 
+  const shortURL = generateRandomString();
+  urlDatabase[shortURL] = request.body["longURL"];
+  response.redirect(`/urls/${shortURL}`);
+});     
+
+app.post('/urls/:shortURL/delete', (request, response) => {
+  delete urlDatabase[request.params.shortURL];
+  response.redirect('/urls');
+});
+
+
+//I AM LISTENING HERE:
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
