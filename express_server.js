@@ -8,12 +8,12 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");    //tells exprees app to use EJS as it's templating engine
 
 function generateRandomString() {
-  Math.random()*10000
-  
+  return Math.random().toString(20).substr(2, 6);
 }
-console.log(generateRandomString());
+
+
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthoutlabs.ca",
+  "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
@@ -24,10 +24,12 @@ Our server logs the request body to the console, then responds with 200 OK.
 Our browser renders the "Ok" message.
 */
 
-app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
-});                               // respond with "ok"
+app.post("/urls", (request, response) => {
+  console.log(request.body); 
+  const shortURL = generateRandomString();
+  urlDatabase[shortURL] = request.body["longURL"];
+  response.redirect(`/urls/${shortURL}`);
+});                               
 
 app.get("/", (request, response) => {
   response.send("Hello!")
@@ -50,8 +52,13 @@ app.get('/urls/new', (request, response) => {
 });
 
 app.get('/urls/:shortURL', (request, response) => {
-  const templateVars = { shortURL: request.params.shortURL, longURL: `/urls/${request.params.shortURL}`};
+  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL]};
   response.render("urls_show", templateVars);
+});
+
+app.get("/u/:shortURL", (request, response) => {
+  const longURL = urlDatabase[request.params.shortURL]
+  response.redirect(longURL);
 });
 
 app.listen(PORT, () => {
