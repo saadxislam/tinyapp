@@ -59,7 +59,16 @@ app.get("/u/:shortURL", (request, response) => {
 });
 
 
-//THESE ARE MY CREATE POST ROUTES:
+//THESE ARE MY CREATE/DELETE POST ROUTES:
+
+app.post('/urls/:id', (request, response) => {
+  const shortURL = request.params.id
+  urlDatabase[shortURL] = request.body.longURL
+
+  response.redirect('/urls');
+});
+  
+
 app.post("/urls", (request, response) => {
   console.log(request.body); 
   const shortURL = generateRandomString();
@@ -73,6 +82,12 @@ app.post('/urls/:shortURL/delete', (request, response) => {
 });
 
 
+// // CATCH ALL
+// app.get('*', (request, response) => {
+//   response.status(404).send('Page not found');
+//  });
+
+ 
 //I AM LISTENING HERE:
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
