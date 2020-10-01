@@ -54,7 +54,7 @@ app.get("/", (request, response) => {
 app.get("/urls", (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID];               //check if that user ID is not in the users
-  const templateVars = { urls: urlDatabase, username: request.cookies["username"], user: user } 
+  const templateVars = { urls: urlDatabase,  user: user } 
   response.render("urls_index", templateVars);
   
 });
@@ -63,21 +63,29 @@ app.get("/urls", (request, response) => {
 app.get('/register', (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID]; 
-  const templateVars = { urls: urlDatabase, username: request.cookies["username"], user: user } 
+  const templateVars = { urls: urlDatabase,  user: user } 
   response.render('urls_register', templateVars);
+})
+
+// GETTING TO LOGIN PAGE:
+app.get('/login', (request, response) => {
+  const userID = request.cookies['user_id'];
+  const user = users[userID]; 
+  const templateVars = { urls: urlDatabase,  user: user } 
+  response.render('urls_login', templateVars);
 })
 
 app.get('/urls/new', (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID]; 
-  const templateVars = { username: request.cookies["username"], user: user };
+  const templateVars = {  user: user };
   response.render("urls_new", templateVars);
 });
 
 app.get('/urls/:shortURL', (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID]; 
-  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL] , username: request.cookies["username"], user: user};
+  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL] ,  user: user};
   response.render("urls_show", templateVars);
 });
 
@@ -95,11 +103,22 @@ Our browser sends a POST request to our server.
 
 //ADDING AN ENDPOINT TO HANDLE POST TO /LOGIN:
 app.post('/login', (request, response) => {
-console.log('request :', request); // notice that this is an object and you want the body key of it
   const username = request.body.username;
-  response.cookie("username", username);
+  const password = request.body.password
 
-  response.redirect('/urls');
+ if (!emailExists(request.body.email)){
+  response.status(403).send('Email not found');
+ } else {
+   const id = emailExists(request.body.email) 
+   if (users[id].password !== request.body.password){
+    response.status(403).send('Password mismatch');
+   } else {
+    response.cookie('user_id', id);
+   }
+   response.redirect('/urls');
+  }
+
+
 });
 
 //ADDING AN ENDPOINT TO HANDLE POST TO /LOGOUT:
@@ -162,7 +181,6 @@ app.post('/register', (request, response) => {
 const emailExists = (email) => {
   for (let key in users){
     if (users[key].email === email){
-      console.log(users[key].email);
       return key;
     }
   }
