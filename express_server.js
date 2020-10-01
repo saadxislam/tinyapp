@@ -40,11 +40,11 @@ const users = {
   }
 }
 
-urlsForUser = (id) => {
+const urlsForUser = (id) => {
   const userDB = {};
   for (let key in urlDatabase){
     if (urlDatabase[key].userID === id){
-      userDB[key] = {longURL: urlDatabase[key].longURL , userID: id }
+      userDB[key] = urlDatabase[key];
     } 
   }
   return userDB;
@@ -56,13 +56,16 @@ urlsForUser = (id) => {
 //THESE ARE MY "GET" ROUTES:
 app.get("/", (request, response) => {
   // response.send("Hello!")
-  response.redirect('/urls');
+  response.redirect('/login');
 });
 
 //HOME PAGE
 app.get("/urls", (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID];               //check if that user ID is not in the users
+  if (!user){
+    response.send('Must be logged in to behold the beauty of this page. Proceed to /login or /register');
+  }
   const userDB = urlsForUser(userID)
   const templateVars = { urls: userDB,  user: user } 
   response.render("urls_index", templateVars);
@@ -153,7 +156,7 @@ app.post('/urls/:id', (request, response) => {
   if (request.body.longURL in userDB){
     urlDatabase[shortURL] = request.body.longURL
   } else {
-    response.status(403).send('Not your property, Edith')
+    response.status(403).send('Not your property to edit')
   }
   response.redirect('/urls');
 });
