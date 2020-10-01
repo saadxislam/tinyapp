@@ -1,7 +1,11 @@
-//EXPRESS IS A FUNCTION SO WE PUT IT INSIDE CONST APP AND CALL IT
+//CALLING EXPRESS:
 const express = require('express');
 const app = express();
+
 const PORT = 8080; //default port 8080
+
+//BCRYPT
+const bcrypt = require('bcrypt');
 
 //COOKIE PARSER INSTALLED VIA NPM I COOKIE-PARSER
 const cookieParser = require('cookie-parser')
@@ -31,12 +35,14 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: "$2b$10$/dFKYljjDgj8Dv2Y3ik5VO2dAIncSrascckWnzGXm7SR/SKhEbxm2"
+    // password: "purple-monkey-dinosaur"
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: "$2b$10$nFVOrD6ym1WE087Ut0v57Ogz1o1LQdh1AVfyi6K3PpuzHh4sVtgw6"
+    // password: "dishwasher-funk"
   }
 }
 
@@ -65,6 +71,7 @@ app.get("/urls", (request, response) => {
   const user = users[userID];               //check if that user ID is not in the users
   if (!user){
     response.send('Must be logged in to behold the beauty of this page. Proceed to /login or /register');
+    return;
   }
   const userDB = urlsForUser(userID)
   const templateVars = { urls: userDB,  user: user } 
@@ -95,8 +102,9 @@ app.get('/urls/new', (request, response) => {
   const templateVars = {  user: user };
   if (userID){
     response.render("urls_new", templateVars);
+    return;
   } else {
-    response.redirect("urls_login");
+    response.redirect("/login");
   }
 });
 
@@ -121,21 +129,24 @@ Our browser sends a POST request to our server.
 
 //ADDING AN ENDPOINT TO HANDLE POST TO /LOGIN:
 app.post('/login', (request, response) => {
-  const username = request.body.username;
-  const password = request.body.password
 
- if (!emailExists(request.body.email)){
-  response.status(403).send('Email not found');
- } else {
-   const id = emailExists(request.body.email) 
-   if (users[id].password !== request.body.password){
-    response.status(403).send('Password mismatch');
-   } else {
-    response.cookie('user_id', id);
-   }
-   response.redirect('/urls');
+  
+  const user = getUserByEmail(request.body.email);
+  console.log(user);
+
+
+  if (!user) {
+    response.status(403).send('Email not found');
   }
 
+  const isPasswordGood = bcrypt.compareSync(request.body.password, user.password);
+  if (!isPasswordGood) {
+    response.status(403).send('Password mismatch');
+    return;
+  }
+  response.cookie('user_id', user.id);
+
+  response.redirect('/urls');
 
 });
 
@@ -144,7 +155,7 @@ app.post('/logout', (request, response) => {
 
   response.clearCookie("user_id");
   
-  response.redirect('/urls');
+  response.redirect('/');
 });
 
 
@@ -183,38 +194,44 @@ app.post('/urls/:shortURL/delete', (request, response) => {
 });
 
 app.post('/register', (request, response) => {
-
-  const newUserID = generateRandomString();
-  const id = newUserID;
   const email = request.body.email;
   const password = request.body.password;
+
+  if (!email || !password){
+    response.status(400).send('can\'t leave fields empty');
+    return;
+  }
+
+  const user = getUserByEmail(email);
+  if (user){
+    response.send("User exists");
+    return;
+  }
+  
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  console.log('hashedPassword :', hashedPassword);
+
+  const id = generateRandomString();
 
   const newUser = {
     id,
     email,
-    password,
+    password: hashedPassword,
   }
 
-  
-  if (!email || !password){
-    response.status(400).send('can\'t leave fields empty');
-  } else if(emailExists(request.body.email)){
-    response.status(400).send('Email already registered');
-  } else {
-    users[newUserID] = newUser;
-    response.cookie('user_id', newUserID);
+  users[id] = newUser;
+    response.cookie('user_id', id);
     response.redirect('urls');
-  }  
-  
-
+    
 })
-const emailExists = (email) => {
+
+const getUserByEmail = (email) => {
   for (let key in users){
     if (users[key].email === email){
-      return key;
+      return users[key];
     }
   }
-  return false;
+  return null;
 }
 
 // // CATCH ALL
