@@ -9,6 +9,7 @@ app.use(cookieParser());
 
 //BODY PARSER INSTALLED VIA NPM I BODY-PARSER
 const bodyParser = require("body-parser");
+const { request } = require('express');
 app.use(bodyParser.urlencoded({extended: true}));
 
 //SETS THE VIEW ENGINE MIDDLEWARE AS 'EJS'
@@ -21,8 +22,8 @@ function generateRandomString() {
 
 // OUR DB OF URLS:
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+"b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" },
+"9sm5xK": {longURL: "http://www.google.com", userID: "user2RandomID" }
 };
 
 //OUR DATA STORE OF USERS:
@@ -39,7 +40,15 @@ const users = {
   }
 }
 
-
+urlsForUser = (id) => {
+  const userDB = {};
+  for (let key in urlDatabase){
+    if (urlDatabase[key].userID === id){
+      userDB[key] = {longURL: urlDatabase[key].longURL , userID: id }
+    } 
+  }
+  return userDB;
+}
 
 
 
@@ -54,7 +63,8 @@ app.get("/", (request, response) => {
 app.get("/urls", (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID];               //check if that user ID is not in the users
-  const templateVars = { urls: urlDatabase,  user: user } 
+  const userDB = urlsForUser(userID)
+  const templateVars = { urls: userDB,  user: user } 
   response.render("urls_index", templateVars);
   
 });
@@ -63,7 +73,8 @@ app.get("/urls", (request, response) => {
 app.get('/register', (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID]; 
-  const templateVars = { urls: urlDatabase,  user: user } 
+  
+  const templateVars = { urls: urlDatabase,  user: user,  } 
   response.render('urls_register', templateVars);
 })
 
@@ -79,18 +90,22 @@ app.get('/urls/new', (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID]; 
   const templateVars = {  user: user };
-  response.render("urls_new", templateVars);
+  if (userID){
+    response.render("urls_new", templateVars);
+  } else {
+    response.redirect("urls_login");
+  }
 });
 
 app.get('/urls/:shortURL', (request, response) => {
   const userID = request.cookies['user_id'];
   const user = users[userID]; 
-  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL] ,  user: user};
+  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL].longURL ,  user: user};
   response.render("urls_show", templateVars);
 });
 
 app.get("/u/:shortURL", (request, response) => {
-  const longURL = urlDatabase[request.params.shortURL]
+  const longURL = urlDatabase[request.params.shortURL].longURL;
   response.redirect(longURL);
 });
 
@@ -134,8 +149,12 @@ app.post('/logout', (request, response) => {
 
 app.post('/urls/:id', (request, response) => {
   const shortURL = request.params.id
-  urlDatabase[shortURL] = request.body.longURL
-
+  const userDB = urlsForUser(request.cookies['user_id'])
+  if (request.body.longURL in userDB){
+    urlDatabase[shortURL] = request.body.longURL
+  } else {
+    response.status(403).send('Not your property, Edith')
+  }
   response.redirect('/urls');
 });
   
@@ -143,12 +162,20 @@ app.post('/urls/:id', (request, response) => {
 app.post("/urls", (request, response) => {
   console.log(request.body); 
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = request.body["longURL"];
+  const userID = request.cookies['user_id'];
+  
+  urlDatabase[shortURL] = { longURL: request.body["longURL"], userID: userID };
   response.redirect(`/urls/${shortURL}`);
 });     
 
 app.post('/urls/:shortURL/delete', (request, response) => {
-  delete urlDatabase[request.params.shortURL];
+  const userDB = urlsForUser(request.cookies['user_id'])
+  if (request.params.shortURL in userDB){
+    delete urlDatabase[request.params.shortURL];
+  } else {
+    response.status(403).send('Not your property to delete')
+  }
+  
   response.redirect('/urls');
 });
 
