@@ -25,12 +25,26 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+//OUR DATA STORE OF USERS:
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  }
+}
 
 
 
 
 
-//THESE ARE MY READING "GET" ROUTES:
+
+//THESE ARE MY "GET" ROUTES:
 app.get("/", (request, response) => {
   // response.send("Hello!")
   response.redirect('/urls');
@@ -38,17 +52,32 @@ app.get("/", (request, response) => {
 
 //HOME PAGE
 app.get("/urls", (request, response) => {
-  const templateVars = { urls: urlDatabase, username: request.cookies["username"] } 
+  const userID = request.cookies['user_id'];
+  const user = users[userID];               //check if that user ID is not in the users
+  const templateVars = { urls: urlDatabase, username: request.cookies["username"], user: user } 
   response.render("urls_index", templateVars);
+  
 });
 
+// GETTING TO REGISTRATION PAGE:
+app.get('/register', (request, response) => {
+  const userID = request.cookies['user_id'];
+  const user = users[userID]; 
+  const templateVars = { urls: urlDatabase, username: request.cookies["username"], user: user } 
+  response.render('urls_register', templateVars);
+})
+
 app.get('/urls/new', (request, response) => {
-  const templateVars = { username: request.cookies["username"] };
+  const userID = request.cookies['user_id'];
+  const user = users[userID]; 
+  const templateVars = { username: request.cookies["username"], user: user };
   response.render("urls_new", templateVars);
 });
 
 app.get('/urls/:shortURL', (request, response) => {
-  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL] , username: request.cookies["username"]};
+  const userID = request.cookies['user_id'];
+  const user = users[userID]; 
+  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL] , username: request.cookies["username"], user: user};
   response.render("urls_show", templateVars);
 });
 
@@ -68,7 +97,6 @@ Our browser sends a POST request to our server.
 app.post('/login', (request, response) => {
 console.log('request :', request); // notice that this is an object and you want the body key of it
   const username = request.body.username;
-  
   response.cookie("username", username);
 
   response.redirect('/urls');
@@ -77,7 +105,7 @@ console.log('request :', request); // notice that this is an object and you want
 //ADDING AN ENDPOINT TO HANDLE POST TO /LOGOUT:
 app.post('/logout', (request, response) => {
 
-  response.clearCookie("username");
+  response.clearCookie("user_id");
   
   response.redirect('/urls');
 });
@@ -105,6 +133,41 @@ app.post('/urls/:shortURL/delete', (request, response) => {
   response.redirect('/urls');
 });
 
+app.post('/register', (request, response) => {
+
+  const newUserID = generateRandomString();
+  const id = newUserID;
+  const email = request.body.email;
+  const password = request.body.password;
+
+  const newUser = {
+    id,
+    email,
+    password,
+  }
+
+  
+  if (!email || !password){
+    response.status(400).send('can\'t leave fields empty');
+  } else if(emailExists(request.body.email)){
+    response.status(400).send('Email already registered');
+  } else {
+    users[newUserID] = newUser;
+    response.cookie('user_id', newUserID);
+    response.redirect('urls');
+  }  
+  
+
+})
+const emailExists = (email) => {
+  for (let key in users){
+    if (users[key].email === email){
+      console.log(users[key].email);
+      return key;
+    }
+  }
+  return false;
+}
 
 // // CATCH ALL
 // app.get('*', (request, response) => {
