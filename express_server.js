@@ -1,36 +1,32 @@
-//CALLING EXPRESS:
+const { request } = require('express');
+const { getUserByEmail, urlsForUser, generateRandomString } = require('./helpers');
+
 const express = require('express');
 const app = express();
 
-const PORT = 8080; //default port 8080
-
-//BCRYPT
 const bcrypt = require('bcrypt');
-
-//COOKIE PARSER INSTALLED VIA NPM I COOKIE-PARSER
 const cookieSession = require('cookie-session');
+const bodyParser = require("body-parser");
+
+
+const PORT = 8080;
+
 app.use(cookieSession({
   name: 'session',
   keys: ["key1", "key2"]
 }));
 
-//BODY PARSER INSTALLED VIA NPM I BODY-PARSER
-const bodyParser = require("body-parser");
-const { request } = require('express');
 app.use(bodyParser.urlencoded({extended: true}));
 
-//SETS THE VIEW ENGINE MIDDLEWARE AS 'EJS'
-app.set("view engine", "ejs");    //tells exprees app to use EJS as it's templating engine
+app.set("view engine", "ejs");
 
-//FUNCTION TO SET UP A RANDOM STRING THAT'S ALPHANUMERIC FOR THE SHORTURL
-function generateRandomString() {
-  return Math.random().toString(20).substr(2, 6);
-}
+
+
 
 // OUR DB OF URLS:
 const urlDatabase = {
-"b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" },
-"9sm5xK": {longURL: "http://www.google.com", userID: "user2RandomID" }
+  "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" },
+  "9sm5xK": {longURL: "http://www.google.com", userID: "user2RandomID" }
 };
 
 //OUR DATA STORE OF USERS:
@@ -47,26 +43,17 @@ const users = {
     password: "$2b$10$nFVOrD6ym1WE087Ut0v57Ogz1o1LQdh1AVfyi6K3PpuzHh4sVtgw6"
     // password: "dishwasher-funk"
   }
-}
+};
 
 //HELPFUL FUNCTIONS:
 
-const urlsForUser = (id) => {
-  const userDB = {};
-  for (let key in urlDatabase){
-    if (urlDatabase[key].userID === id){
-      userDB[key] = urlDatabase[key];
-    } 
-  }
-  return userDB;
-}
+
 
 
 
 
 //THESE ARE MY "GET" ROUTES:
 app.get("/", (request, response) => {
-  // response.send("Hello!")
   response.redirect('/login');
 });
 
@@ -74,12 +61,12 @@ app.get("/", (request, response) => {
 app.get("/urls", (request, response) => {
   const userID = request.session.user_id;
   const user = users[userID];               //check if that user ID is not in the users
-  if (!user){
+  if (!user) {
     response.send('Must be logged in to behold the beauty of this page. Proceed to /login or /register');
     return;
   }
-  const userDB = urlsForUser(userID)
-  const templateVars = { urls: userDB,  user: user } 
+  const userDB = urlsForUser(userID, urlDatabase);
+  const templateVars = { urls: userDB,  user: user };
   response.render("urls_index", templateVars);
   
 });
@@ -87,25 +74,25 @@ app.get("/urls", (request, response) => {
 // GETTING TO REGISTRATION PAGE:
 app.get('/register', (request, response) => {
   const userID = request.session.user_id;
-  const user = users[userID]; 
+  const user = users[userID];
   
-  const templateVars = { urls: urlDatabase,  user: user,  } 
+  const templateVars = { urls: urlDatabase,  user: user,  };
   response.render('urls_register', templateVars);
-})
+});
 
 // GETTING TO LOGIN PAGE:
 app.get('/login', (request, response) => {
   const userID = request.session.user_id;
-  const user = users[userID]; 
-  const templateVars = { urls: urlDatabase,  user: user } 
+  const user = users[userID];
+  const templateVars = { urls: urlDatabase,  user: user };
   response.render('urls_login', templateVars);
-})
+});
 
 app.get('/urls/new', (request, response) => {
   const userID = request.session.user_id;
-  const user = users[userID]; 
+  const user = users[userID];
   const templateVars = {  user: user };
-  if (userID){
+  if (userID) {
     response.render("urls_new", templateVars);
     return;
   } else {
@@ -115,7 +102,7 @@ app.get('/urls/new', (request, response) => {
 
 app.get('/urls/:shortURL', (request, response) => {
   const userID = request.session.user_id;
-  const user = users[userID]; 
+  const user = users[userID];
   const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL].longURL ,  user: user};
   response.render("urls_show", templateVars);
 });
@@ -167,32 +154,32 @@ app.post('/logout', (request, response) => {
 
 
 app.post('/urls/:id', (request, response) => {
-  const shortURL = request.params.id
-  const userDB = urlsForUser(request.session.user_id)
-  if (request.body.longURL in userDB){
-    urlDatabase[shortURL] = request.body.longURL
+  const shortURL = request.params.id;
+  const userUrlsDB = urlsForUser(request.session.user_id, urlDatabase);
+  if (shortURL in userUrlsDB) {
+    urlDatabase[shortURL].longURL = request.body.longURL;
   } else {
-    response.status(403).send('Not your property to edit')
+    response.status(403).send('Not your property to edit');
   }
   response.redirect('/urls');
 });
   
 
 app.post("/urls", (request, response) => {
-  console.log(request.body); 
+  console.log(request.body);
   const shortURL = generateRandomString();
   const userID = request.session.user_id;
   
   urlDatabase[shortURL] = { longURL: request.body["longURL"], userID: userID };
   response.redirect(`/urls/${shortURL}`);
-});     
+});
 
 app.post('/urls/:shortURL/delete', (request, response) => {
-  const userDB = urlsForUser(request.session.user_id)
-  if (request.params.shortURL in userDB){
+  const userDB = urlsForUser(request.session.user_id, urlDatabase);
+  if (request.params.shortURL in userDB) {
     delete urlDatabase[request.params.shortURL];
   } else {
-    response.status(403).send('Not your property to delete')
+    response.status(403).send('Not your property to delete');
   }
   
   response.redirect('/urls');
@@ -202,13 +189,13 @@ app.post('/register', (request, response) => {
   const email = request.body.email;
   const password = request.body.password;
 
-  if (!email || !password){
+  if (!email || !password) {
     response.status(400).send('can\'t leave fields empty');
     return;
   }
 
   const user = getUserByEmail(email, users);
-  if (user){
+  if (user) {
     response.send("User exists");
     return;
   }
@@ -222,23 +209,15 @@ app.post('/register', (request, response) => {
     id,
     email,
     password: hashedPassword,
-  }
+  };
 
   users[id] = newUser;
-    request.session.user_id = newUser.id;
-    response.redirect('urls');
+  request.session.user_id = newUser.id;
+  response.redirect('urls');
     
-})
+});
 
-//takes in an email and returns a user object which matches the email, or null if not found
-const getUserByEmail = (email, database) => { 
-  for (let key in database){
-    if (database[key].email === email){
-      return database[key];
-    }
-  }
-  return null;
-}
+
 
 // // CATCH ALL
 // app.get('*', (request, response) => {
@@ -252,5 +231,5 @@ app.listen(PORT, () => {
 });
 
 // module.exports = { getUserByEmail, urlsForUser  } //helpers.js
-// const helpers = require('./helpers'); 
+// const helpers = require('./helpers');
 
