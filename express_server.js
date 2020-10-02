@@ -45,14 +45,8 @@ const users = {
   }
 };
 
-//HELPFUL FUNCTIONS:
 
-
-
-
-
-
-//THESE ARE MY "GET" ROUTES:
+// 
 app.get("/", (request, response) => {
   response.redirect('/login');
 });
@@ -71,7 +65,7 @@ app.get("/urls", (request, response) => {
   
 });
 
-// GETTING TO REGISTRATION PAGE:
+// REGISTRATION ROUTE
 app.get('/register', (request, response) => {
   const userID = request.session.user_id;
   const user = users[userID];
@@ -80,7 +74,7 @@ app.get('/register', (request, response) => {
   response.render('urls_register', templateVars);
 });
 
-// GETTING TO LOGIN PAGE:
+// LOGIN ROUTE
 app.get('/login', (request, response) => {
   const userID = request.session.user_id;
   const user = users[userID];
@@ -88,6 +82,7 @@ app.get('/login', (request, response) => {
   response.render('urls_login', templateVars);
 });
 
+// NEW URL ROUTE
 app.get('/urls/new', (request, response) => {
   const userID = request.session.user_id;
   const user = users[userID];
@@ -100,6 +95,7 @@ app.get('/urls/new', (request, response) => {
   }
 });
 
+// ROUTE BASED ON SPECIFIC URL
 app.get('/urls/:shortURL', (request, response) => {
   const userID = request.session.user_id;
   const user = users[userID];
@@ -107,19 +103,14 @@ app.get('/urls/:shortURL', (request, response) => {
   response.render("urls_show", templateVars);
 });
 
+//REDIRECT SHORT URL TO LONG
 app.get("/u/:shortURL", (request, response) => {
   const longURL = urlDatabase[request.params.shortURL].longURL;
   response.redirect(longURL);
 });
 
 
-//THESE ARE MY CREATE/DELETE POST ROUTES:
-/*
-After our browser renders our new URL form, the user populates the form with a longURL and presses submit.
-Our browser sends a POST request to our server.
-*/
-
-//ADDING AN ENDPOINT TO HANDLE POST TO /LOGIN:
+// /LOGIN ACTION
 app.post('/login', (request, response) => {
 
   
@@ -142,7 +133,7 @@ app.post('/login', (request, response) => {
 
 });
 
-//ADDING AN ENDPOINT TO HANDLE POST TO /LOGOUT:
+// /LOGOUT ACTION
 app.post('/logout', (request, response) => {
 
   request.session = null;
@@ -152,7 +143,7 @@ app.post('/logout', (request, response) => {
 
 
 
-
+//
 app.post('/urls/:id', (request, response) => {
   const shortURL = request.params.id;
   const userUrlsDB = urlsForUser(request.session.user_id, urlDatabase);
@@ -164,7 +155,7 @@ app.post('/urls/:id', (request, response) => {
   response.redirect('/urls');
 });
   
-
+// 
 app.post("/urls", (request, response) => {
   console.log(request.body);
   const shortURL = generateRandomString();
@@ -217,19 +208,10 @@ app.post('/register', (request, response) => {
     
 });
 
-
-
-// // CATCH ALL
-// app.get('*', (request, response) => {
-//   response.status(404).send('Page not found');
-//  });
-
  
-//I AM LISTENING HERE:
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-// module.exports = { getUserByEmail, urlsForUser  } //helpers.js
-// const helpers = require('./helpers');
+
 
