@@ -8,8 +8,11 @@ const PORT = 8080; //default port 8080
 const bcrypt = require('bcrypt');
 
 //COOKIE PARSER INSTALLED VIA NPM I COOKIE-PARSER
-const cookieParser = require('cookie-parser')
-app.use(cookieParser());
+const cookieSession = require('cookie-session');
+app.use(cookieSession({
+  name: 'session',
+  keys: ["key1", "key2"]
+}));
 
 //BODY PARSER INSTALLED VIA NPM I BODY-PARSER
 const bodyParser = require("body-parser");
@@ -46,6 +49,8 @@ const users = {
   }
 }
 
+//HELPFUL FUNCTIONS:
+
 const urlsForUser = (id) => {
   const userDB = {};
   for (let key in urlDatabase){
@@ -67,7 +72,7 @@ app.get("/", (request, response) => {
 
 //HOME PAGE
 app.get("/urls", (request, response) => {
-  const userID = request.cookies['user_id'];
+  const userID = request.session.user_id;
   const user = users[userID];               //check if that user ID is not in the users
   if (!user){
     response.send('Must be logged in to behold the beauty of this page. Proceed to /login or /register');
@@ -81,7 +86,7 @@ app.get("/urls", (request, response) => {
 
 // GETTING TO REGISTRATION PAGE:
 app.get('/register', (request, response) => {
-  const userID = request.cookies['user_id'];
+  const userID = request.session.user_id;
   const user = users[userID]; 
   
   const templateVars = { urls: urlDatabase,  user: user,  } 
@@ -90,14 +95,14 @@ app.get('/register', (request, response) => {
 
 // GETTING TO LOGIN PAGE:
 app.get('/login', (request, response) => {
-  const userID = request.cookies['user_id'];
+  const userID = request.session.user_id;
   const user = users[userID]; 
   const templateVars = { urls: urlDatabase,  user: user } 
   response.render('urls_login', templateVars);
 })
 
 app.get('/urls/new', (request, response) => {
-  const userID = request.cookies['user_id'];
+  const userID = request.session.user_id;
   const user = users[userID]; 
   const templateVars = {  user: user };
   if (userID){
@@ -109,7 +114,7 @@ app.get('/urls/new', (request, response) => {
 });
 
 app.get('/urls/:shortURL', (request, response) => {
-  const userID = request.cookies['user_id'];
+  const userID = request.session.user_id;
   const user = users[userID]; 
   const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL].longURL ,  user: user};
   response.render("urls_show", templateVars);
@@ -131,7 +136,7 @@ Our browser sends a POST request to our server.
 app.post('/login', (request, response) => {
 
   
-  const user = getUserByEmail(request.body.email);
+  const user = getUserByEmail(request.body.email, users);
   console.log(user);
 
 
@@ -144,7 +149,7 @@ app.post('/login', (request, response) => {
     response.status(403).send('Password mismatch');
     return;
   }
-  response.cookie('user_id', user.id);
+  request.session.user_id = user.id;
 
   response.redirect('/urls');
 
@@ -153,7 +158,7 @@ app.post('/login', (request, response) => {
 //ADDING AN ENDPOINT TO HANDLE POST TO /LOGOUT:
 app.post('/logout', (request, response) => {
 
-  response.clearCookie("user_id");
+  request.session = null;
   
   response.redirect('/');
 });
@@ -163,7 +168,7 @@ app.post('/logout', (request, response) => {
 
 app.post('/urls/:id', (request, response) => {
   const shortURL = request.params.id
-  const userDB = urlsForUser(request.cookies['user_id'])
+  const userDB = urlsForUser(request.session.user_id)
   if (request.body.longURL in userDB){
     urlDatabase[shortURL] = request.body.longURL
   } else {
@@ -176,14 +181,14 @@ app.post('/urls/:id', (request, response) => {
 app.post("/urls", (request, response) => {
   console.log(request.body); 
   const shortURL = generateRandomString();
-  const userID = request.cookies['user_id'];
+  const userID = request.session.user_id;
   
   urlDatabase[shortURL] = { longURL: request.body["longURL"], userID: userID };
   response.redirect(`/urls/${shortURL}`);
 });     
 
 app.post('/urls/:shortURL/delete', (request, response) => {
-  const userDB = urlsForUser(request.cookies['user_id'])
+  const userDB = urlsForUser(request.session.user_id)
   if (request.params.shortURL in userDB){
     delete urlDatabase[request.params.shortURL];
   } else {
@@ -202,7 +207,7 @@ app.post('/register', (request, response) => {
     return;
   }
 
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, users);
   if (user){
     response.send("User exists");
     return;
@@ -220,15 +225,16 @@ app.post('/register', (request, response) => {
   }
 
   users[id] = newUser;
-    response.cookie('user_id', id);
+    request.session.user_id = newUser.id;
     response.redirect('urls');
     
 })
 
-const getUserByEmail = (email) => {
-  for (let key in users){
-    if (users[key].email === email){
-      return users[key];
+//takes in an email and returns a user object which matches the email, or null if not found
+const getUserByEmail = (email, database) => { 
+  for (let key in database){
+    if (database[key].email === email){
+      return database[key];
     }
   }
   return null;
@@ -244,4 +250,7 @@ const getUserByEmail = (email) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+// module.exports = { getUserByEmail, urlsForUser  } //helpers.js
+// const helpers = require('./helpers'); 
 
