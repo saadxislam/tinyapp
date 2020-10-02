@@ -15,6 +15,9 @@ const testUsers = {
   }
 };
 
+
+//TWO TEST CASES FOR USERS WITH/WITHOUT VALID EMAIL
+
 describe('getUserByEmail', () => {
   it('should return a user with valid email', () => {
     const user = getUserByEmail("user@example.com", testUsers);

@@ -9,8 +9,6 @@ const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
 
 
-const PORT = 8080;
-
 app.use(cookieSession({
   name: 'session',
   keys: ["key1", "key2"]
@@ -20,7 +18,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 app.set("view engine", "ejs");
 
-
+const PORT = 8080;
 
 
 // OUR DB OF URLS:
@@ -155,7 +153,8 @@ app.post('/urls/:id', (request, response) => {
   response.redirect('/urls');
 });
   
-// 
+
+// CREATE NEW URLS
 app.post("/urls", (request, response) => {
   console.log(request.body);
   const shortURL = generateRandomString();
@@ -165,6 +164,7 @@ app.post("/urls", (request, response) => {
   response.redirect(`/urls/${shortURL}`);
 });
 
+// DELETE NEW URLS
 app.post('/urls/:shortURL/delete', (request, response) => {
   const userDB = urlsForUser(request.session.user_id, urlDatabase);
   if (request.params.shortURL in userDB) {
@@ -176,6 +176,8 @@ app.post('/urls/:shortURL/delete', (request, response) => {
   response.redirect('/urls');
 });
 
+
+// REGISTER WITH NEW EMAIL
 app.post('/register', (request, response) => {
   const email = request.body.email;
   const password = request.body.password;
@@ -190,9 +192,8 @@ app.post('/register', (request, response) => {
     response.send("User exists");
     return;
   }
-  
+ //Hashing with bcrypt 
   const hashedPassword = bcrypt.hashSync(password, 10);
-  console.log('hashedPassword :', hashedPassword);
 
   const id = generateRandomString();
 
