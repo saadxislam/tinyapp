@@ -97,8 +97,12 @@ app.get('/urls/new', (request, response) => {
 app.get('/urls/:shortURL', (request, response) => {
   const userID = request.session.user_id;
   const user = users[userID];
-  const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL].longURL ,  user: user};
-  response.render("urls_show", templateVars);
+  if (user){
+    const templateVars = { shortURL: request.params.shortURL, longURL: urlDatabase[request.params.shortURL].longURL ,  user: user};
+    response.render("urls_show", templateVars);
+  } else {
+    response.redirect('/login');
+  }
 });
 
 //REDIRECT SHORT URL TO LONG
